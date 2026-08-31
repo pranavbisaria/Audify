@@ -9,9 +9,8 @@ a quiet video past 100%, without touching anything else.
 Built for macOS 26, supports macOS 15 and later. Native Swift, universal binary, no Electron, no
 kernel extension, no virtual audio driver to install.
 
-**[⬇ Download the latest release](../../releases/latest)** — a signed-locally DMG for Apple
-silicon and Intel Macs. See [Install](#install) below for first-launch notes and the from-source
-option.
+**[⬇ Download the latest release](../../releases/latest)** — a universal DMG for Apple silicon
+and Intel Macs. See [Install](#install) below for first-launch notes and the from-source option.
 
 [![Latest release](https://img.shields.io/github/v/release/pranavbisaria/Audify?label=latest&color=blue)](../../releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/pranavbisaria/Audify/total?label=downloads)](../../releases)
