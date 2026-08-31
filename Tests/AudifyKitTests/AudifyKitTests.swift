@@ -53,6 +53,17 @@ final class BundleIdentityTests: XCTestCase {
         XCTAssertTrue(BrowserIdentity.isBrowser(bundleID: "com.apple.Safari"))
         XCTAssertFalse(BrowserIdentity.isBrowser(bundleID: "com.apple.Music"))
     }
+
+    /// The whole point of the denylist: known system daemons never reach the mixer, regardless of
+    /// case, while a real application with a similar-looking Apple bundle ID is left alone.
+    func testKnownSystemDaemonsAreFiltered() {
+        XCTAssertTrue(AudioProcessRegistry.isSystemService("com.apple.audiomxd"))
+        XCTAssertTrue(AudioProcessRegistry.isSystemService("com.apple.ControlCenter"))
+        XCTAssertTrue(AudioProcessRegistry.isSystemService("systemsoundserverd"))
+        XCTAssertFalse(AudioProcessRegistry.isSystemService("com.apple.music"))
+        XCTAssertFalse(AudioProcessRegistry.isSystemService("com.google.chrome"))
+        XCTAssertFalse(AudioProcessRegistry.isSystemService(""))
+    }
 }
 
 // MARK: - Engine targeting
@@ -252,5 +263,71 @@ final class LatencyProfileTests: XCTestCase {
         for value in frames {
             XCTAssertEqual(value & (value - 1), 0, "\(value) should be a power of two")
         }
+    }
+}
+
+// MARK: - Microphone hot key
+
+final class MicHotKeyTests: XCTestCase {
+    /// Every preset must be a genuinely distinct (key, modifiers) pair — two presets that resolve
+    /// to the same combination would make the picker in Settings lie.
+    func testEveryPresetIsUnique() {
+        let pairs = MicHotKey.allCases.map { "\($0.keyCode)-\($0.carbonModifiers)" }
+        XCTAssertEqual(Set(pairs).count, pairs.count, "duplicate key/modifier combination found")
+    }
+
+    /// Every preset must combine at least two modifiers. A single-modifier global shortcut is far
+    /// more likely to collide with an app's own bindings (⌘M is Minimize almost everywhere).
+    func testEveryPresetUsesAtLeastTwoModifiers() {
+        for choice in MicHotKey.allCases {
+            let bitCount = choice.carbonModifiers.nonzeroBitCount
+            XCTAssertGreaterThanOrEqual(bitCount, 2, "\(choice.displayName) is too easy to collide with")
+        }
+    }
+
+    func testDefaultIsOptionCommandM() {
+        XCTAssertEqual(MicHotKey.optionCommandM.displayName, "⌥⌘M")
+    }
+}
+
+// MARK: - Safety and noise defaults
+
+final class SafetyDefaultsTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private var suiteName: String!
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "com.audify.tests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        super.tearDown()
+    }
+
+    /// Boost defaults off: a fresh install must never let an app exceed 100% until the user
+    /// deliberately opts in, so speakers and hearing are never put at risk by surprise.
+    @MainActor
+    func testBoostIsOffByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        XCTAssertFalse(preferences.allowBoost)
+        XCTAssertEqual(preferences.maxGain, 1)
+    }
+
+    /// Idle apps are hidden by default: without this, every process that has ever touched Core
+    /// Audio clutters the mixer regardless of whether it is making sound.
+    @MainActor
+    func testIdleAppsAreHiddenByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        XCTAssertTrue(preferences.hideIdleApps)
+    }
+
+    @MainActor
+    func testMicHotKeyIsOnByDefaultWithTheFamiliarCombo() {
+        let preferences = Preferences(defaults: defaults)
+        XCTAssertTrue(preferences.micHotKeyEnabled)
+        XCTAssertEqual(preferences.micHotKey, .optionCommandM)
     }
 }

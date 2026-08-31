@@ -47,11 +47,40 @@ struct SettingsView: View {
 
             Section("Mixer") {
                 Toggle("Allow volume boost above 100%", isOn: $preferences.allowBoost)
-                Text("Adds headroom up to 200% with a soft limiter, for quiet sources.")
+                Text(preferences.allowBoost
+                    ? "Up to 200% with a soft limiter, for quiet sources. Turn this off to hard-cap every app at 100% and protect your speakers or hearing."
+                    : "Off by default — no app or tab can be pushed past 100%, which is the safe limit for your speakers and your ears.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Toggle("Show level meters", isOn: $preferences.showMeters)
                 Toggle("Hide apps that are not playing", isOn: $preferences.hideIdleApps)
+                Text("Recommended — without this, every background process that has ever touched audio (system daemons included) clutters the list.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Microphone") {
+                Toggle("Global shortcut to mute microphone", isOn: $preferences.micHotKeyEnabled)
+                if preferences.micHotKeyEnabled {
+                    Picker("Shortcut", selection: $preferences.micHotKey) {
+                        ForEach(MicHotKey.allCases) { key in
+                            Text(key.displayName).tag(key)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    Text("Works everywhere on macOS, even while another app is in front. Shows a brief on-screen confirmation, and the menu bar icon marks a muted mic.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if !controller.microphone.isAvailable {
+                    Text("No microphone detected.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !controller.microphone.supportsHardwareMute {
+                    Text("\(controller.microphone.deviceName) has no hardware mute, so Audify mutes it by lowering its input level instead.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Permission") {
@@ -169,14 +198,23 @@ struct SettingsView: View {
             }
 
             Section("Extension") {
-                Text("Load the extension from the Audify app bundle, then paste the pairing code into its popup.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("1. Reveal the extension folder below.")
+                    Text("2. In Chrome, turn on Developer mode, then Load unpacked and pick that folder.")
+                    Text("3. Click the Audify icon in the toolbar and paste the pairing code above.")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
                 HStack {
                     Button("Reveal Extension Folder") { revealExtension() }
                         .controlSize(.small)
-                    Button("Setup Instructions") { openInstructions() }
+                    Button("Open Chrome Extensions") { openChromeExtensions() }
                         .controlSize(.small)
+                    Button("Full Instructions") { openInstructions() }
+                        .controlSize(.small)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -220,6 +258,14 @@ struct SettingsView: View {
             Bundle.main.bundleURL.path,
             inFileViewerRootedAtPath: Bundle.main.bundleURL.deletingLastPathComponent().path
         )
+    }
+
+    private func openChromeExtensions() {
+        // Chrome (and Chromium-based browsers) register themselves as the handler for their own
+        // chrome:// scheme, so this opens the extensions page directly without Audify needing to
+        // know which browser the user has in front.
+        guard let url = URL(string: "chrome://extensions") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func openInstructions() {

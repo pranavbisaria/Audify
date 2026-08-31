@@ -39,6 +39,7 @@ public final class AudifyController: ObservableObject {
     public let preferences: Preferences
     public let registry = AudioProcessRegistry()
     public let output = OutputDeviceController()
+    public let microphone = MicrophoneController()
     public let bridge = BridgeServer()
     public let engine = TapMixerEngine()
 
@@ -104,6 +105,7 @@ public final class AudifyController: ObservableObject {
 
         registry.start()
         output.start()
+        microphone.start()
         configureBridge()
         rebuildRows()
         refreshPermission()
@@ -116,6 +118,7 @@ public final class AudifyController: ObservableObject {
         bridge.stop()
         registry.stop()
         output.stop()
+        microphone.stop()
     }
 
     /// Called by the menu bar controller. Meters and level polling cost nothing when hidden.
@@ -345,6 +348,17 @@ public final class AudifyController: ObservableObject {
 
     public func toggleMasterMute() {
         output.toggleMute()
+    }
+
+    // MARK: - Microphone
+
+    /// Toggles the default microphone. Called from both the popover button and the global
+    /// keyboard shortcut, so both stay in sync automatically — there is exactly one source of
+    /// truth (`microphone.isMuted`, read straight from the hardware).
+    @discardableResult
+    public func toggleMicMute() -> Bool {
+        microphone.toggleMute()
+        return microphone.isMuted
     }
 
     // MARK: - Browser bridge

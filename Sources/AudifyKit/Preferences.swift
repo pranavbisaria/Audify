@@ -25,6 +25,51 @@ public enum LatencyProfile: Int, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A candidate global key combination for the microphone mute shortcut.
+///
+/// A fixed, curated list rather than a free-form recorder: every option here is already checked
+/// against the shortcuts macOS itself and common apps use, so there is no way for a user to pick
+/// something that silently collides with Spotlight, Mission Control, emoji picker, etc.
+public enum MicHotKey: Int, CaseIterable, Identifiable, Sendable {
+    /// ⌥⌘M — the same combination the popular "Mute" utility uses, so it is already muscle memory
+    /// for anyone who has used a mic-mute app before, and it does not collide with any system or
+    /// browser shortcut.
+    case optionCommandM = 0
+    case controlOptionM = 1
+    case optionCommandK = 2
+    case controlOptionSpace = 3
+
+    public var id: Int { rawValue }
+
+    /// (virtual key code, Carbon modifier mask) consumed by `GlobalHotKey`.
+    public var keyCode: UInt32 {
+        switch self {
+        case .optionCommandM, .controlOptionM: return 0x2E // kVK_ANSI_M
+        case .optionCommandK: return 0x28 // kVK_ANSI_K
+        case .controlOptionSpace: return 0x31 // kVK_Space
+        }
+    }
+
+    /// Carbon modifier flags: `optionKey = 0x0800`, `cmdKey = 0x0100`, `controlKey = 0x1000`.
+    public var carbonModifiers: UInt32 {
+        switch self {
+        case .optionCommandM: return 0x0800 | 0x0100
+        case .controlOptionM: return 0x1000 | 0x0800
+        case .optionCommandK: return 0x0800 | 0x0100
+        case .controlOptionSpace: return 0x1000 | 0x0800
+        }
+    }
+
+    public var displayName: String {
+        switch self {
+        case .optionCommandM: return "⌥⌘M"
+        case .controlOptionM: return "⌃⌥M"
+        case .optionCommandK: return "⌥⌘K"
+        case .controlOptionSpace: return "⌃⌥Space"
+        }
+    }
+}
+
 /// All persisted settings, backed by `UserDefaults`.
 ///
 /// Volumes are stored by canonical bundle identifier and by site host, so a choice survives both
@@ -46,6 +91,8 @@ public final class Preferences: ObservableObject {
         static let bridgeToken = "bridgeToken"
         static let hasCompletedSetup = "hasCompletedSetup"
         static let menuBarStyle = "menuBarStyle"
+        static let micHotKeyEnabled = "micHotKeyEnabled"
+        static let micHotKey = "micHotKeyChoice"
     }
 
     public static let maxBoostGain: Float = 2.0
@@ -89,6 +136,12 @@ public final class Preferences: ObservableObject {
     @Published public var hasCompletedSetup: Bool {
         didSet { defaults.set(hasCompletedSetup, forKey: Key.hasCompletedSetup) }
     }
+    @Published public var micHotKeyEnabled: Bool {
+        didSet { defaults.set(micHotKeyEnabled, forKey: Key.micHotKeyEnabled) }
+    }
+    @Published public var micHotKey: MicHotKey {
+        didSet { defaults.set(micHotKey.rawValue, forKey: Key.micHotKey) }
+    }
 
     /// Shared secret the browser extension must present. Generated once, on first launch.
     public let bridgeToken: String
@@ -97,12 +150,19 @@ public final class Preferences: ObservableObject {
         self.defaults = defaults
         defaults.register(defaults: [
             Key.showMeters: true,
-            Key.allowBoost: true,
+            // Off by default: an app boosted past 100% can drive speakers or headphones louder
+            // than the source ever intended. Boost is opt-in, not opt-out.
+            Key.allowBoost: false,
             Key.latency: LatencyProfile.balanced.rawValue,
-            Key.hideIdleApps: false,
+            // On by default: without this every process that has ever touched Core Audio — most
+            // of them system daemons with no volume worth adjusting — clutters the list. Apps
+            // still appear the instant they make sound.
+            Key.hideIdleApps: true,
             Key.rememberPerSite: true,
             Key.bridgeEnabled: true,
             Key.bridgePort: Preferences.defaultBridgePort,
+            Key.micHotKeyEnabled: true,
+            Key.micHotKey: MicHotKey.optionCommandM.rawValue,
         ])
 
         appVolumes = defaults.dictionary(forKey: Key.appVolumes) as? [String: Float] ?? [:]
@@ -117,6 +177,8 @@ public final class Preferences: ObservableObject {
         bridgeEnabled = defaults.bool(forKey: Key.bridgeEnabled)
         bridgePort = defaults.integer(forKey: Key.bridgePort)
         hasCompletedSetup = defaults.bool(forKey: Key.hasCompletedSetup)
+        micHotKeyEnabled = defaults.bool(forKey: Key.micHotKeyEnabled)
+        micHotKey = MicHotKey(rawValue: defaults.integer(forKey: Key.micHotKey)) ?? .optionCommandM
 
         if let existing = defaults.string(forKey: Key.bridgeToken), !existing.isEmpty {
             bridgeToken = existing

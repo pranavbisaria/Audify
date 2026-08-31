@@ -14,10 +14,15 @@ kernel extension, no virtual audio driver to install.
 ## What it does
 
 - **Per-app volume and mute** for every app that plays audio, remembered by app across relaunches.
+  Only apps that are actually playing (or that you've adjusted) are shown — background system
+  services never clutter the list.
 - **Per-tab volume and mute** in Chrome, Edge, Brave, Vivaldi and other Chromium browsers, with
   each site's level remembered for next time.
 - **Master output** volume, mute and output-device switching, without opening System Settings.
-- **Volume boost to 200%** with a soft limiter, for sources that are simply too quiet.
+- **Microphone mute**, from the menu bar or a global keyboard shortcut (**⌥⌘M** by default), with
+  an on-screen confirmation and a menu bar badge so you always know if your mic is live.
+- **Volume boost to 200%**, off by default. Every app and tab is hard-capped at 100% until you
+  explicitly opt in under Settings ▸ General — the safe default for your speakers and your hearing.
 - **Live level meters** per app, so you can see what is making noise.
 - **Menu bar only** — no Dock icon, no window, no background daemon.
 - **Start at login**, asked for once rather than assumed.
@@ -70,6 +75,29 @@ Design decisions worth knowing about:
   `processRestoreEnabled`, so the OS itself re-attaches a tap when an app relaunches.
 - **Browser helper processes are collapsed onto their host app**, so Chrome is one row rather than
   fourteen `Chrome Helper` rows.
+- **System daemons never reach the mixer.** macOS reports *every* process that has ever touched
+  Core Audio — UI sound servers, accessibility daemons, Siri's audio pipeline — not just apps.
+  These are filtered out before a listener is even attached to them, and idle apps (playing
+  nothing, at 100%, unadjusted) are hidden by default too. What's left is only what's worth a slider.
+- **Volume boost defaults to off.** `preferences.volume(forApp:)` clamps to 100% unless boost is
+  explicitly enabled in Settings, so there is no accidental path to sending an app louder than its
+  source ever intended.
+- **The microphone shortcut uses Carbon's `RegisterEventHotKey`**, the same global-hotkey mechanism
+  Spotlight and the screenshot tool use — not a raw keystroke monitor. That means it needs no
+  Accessibility or Input Monitoring permission, and it does nothing at all except in the instant
+  the exact combination is pressed.
+
+## Microphone mute
+
+A menu bar button and a global keyboard shortcut (**⌥⌘M** by default — the same combination the
+popular "Mute" utility uses) mute the system default microphone from anywhere, in any app. Toggling
+shows a brief on-screen confirmation and badges the menu bar icon so the mic's state is always
+visible without opening the mixer. Both the shortcut and its combination can be turned off or
+changed under Settings ▸ General.
+
+Muting is a hardware-level control (the same one Control Center uses) — it needs no audio
+permission and involves no Core Audio tap, so it works even before you've granted Audify system
+audio access.
 
 ## Install
 

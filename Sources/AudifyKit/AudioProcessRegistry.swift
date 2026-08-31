@@ -129,6 +129,8 @@ public final class AudioProcessRegistry: ObservableObject {
             else { return nil }
 
             let bundleID = (try? CAProperty.string(objectID, kAudioProcessPropertyBundleID)) ?? ""
+            guard !Self.isSystemService(bundleID) else { return nil }
+
             let resolved = bundleID.isEmpty ? "pid:\(pid)" : bundleID
             let playing = (try? CAProperty.value(
                 objectID, kAudioProcessPropertyIsRunningOutput, defaultValue: UInt32(0)
@@ -138,6 +140,47 @@ public final class AudioProcessRegistry: ObservableObject {
                 objectID: objectID, pid: pid, bundleID: resolved, isPlaying: playing == 1
             )
         }
+    }
+
+    /// Background system daemons that register Core Audio process objects but are never something
+    /// a user would want a volume slider for.
+    ///
+    /// macOS reports *every* process that has ever touched Core Audio in
+    /// `kAudioHardwarePropertyProcessObjectList`, not just foreground apps — UI sound servers,
+    /// accessibility daemons, telephony helpers, Siri's audio pipeline, and more. Left unfiltered,
+    /// these outnumber the apps someone actually meant to control 3 or 4 to 1. They are dropped
+    /// before a `CAPropertyObserver` is even attached to them, not just hidden in the UI, so they
+    /// cost nothing beyond a single string comparison.
+    nonisolated static let systemServiceBundleIDs: Set<String> = [
+        "com.apple.audiomxd",
+        "com.apple.mediaremoted",
+        "com.apple.audio.core-audio-driver-service.helper",
+        "com.apple.universalaccessd",
+        "com.apple.cmio.continuitycaptureagent",
+        "com.apple.corespeech",
+        "com.apple.avconferenced",
+        "com.apple.controlcenter",
+        "com.apple.accessibilitysettingswidgetextension",
+        "com.apple.loginwindow",
+        "com.apple.powerchime",
+        "com.apple.sirincservice",
+        "com.apple.siri",
+        "com.apple.assistantd",
+        "com.apple.telephonyutilities",
+        "com.apple.cloudpaird",
+        "com.apple.systemsoundserverd",
+        "systemsoundserverd",
+        "com.apple.webkit.gpu",
+        "com.apple.webkit.networking",
+        "com.apple.accessibility.heard",
+        "com.apple.speech.speechsynthesisd",
+        "com.apple.callservicesd",
+        "com.apple.coreduetd",
+        "com.apple.videosubscriptionsagent",
+    ]
+
+    nonisolated static func isSystemService(_ bundleID: String) -> Bool {
+        systemServiceBundleIDs.contains(bundleID.lowercased())
     }
 
     /// Adds listeners for newly seen processes and drops them for departed ones.

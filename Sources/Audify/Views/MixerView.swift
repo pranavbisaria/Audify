@@ -6,6 +6,7 @@ struct MixerView: View {
     @ObservedObject var controller: AudifyController
     @ObservedObject var preferences: Preferences
     @ObservedObject var output: OutputDeviceController
+    @ObservedObject var microphone: MicrophoneController
     @ObservedObject var bridge: BridgeServer
 
     let onOpenSettings: () -> Void
@@ -64,6 +65,15 @@ struct MixerView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .help("Return every app and site to 100%")
+            }
+            if microphone.isAvailable {
+                Button(action: { controller.toggleMicMute() }) {
+                    Image(systemName: microphone.isMuted ? "mic.slash.fill" : "mic.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(microphone.isMuted ? Color.red : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(microMuteHelpText)
             }
             Button(action: onOpenSettings) {
                 Image(systemName: "gearshape")
@@ -182,13 +192,20 @@ struct MixerView: View {
                     detail: "Turn it on in Settings to control individual tabs."
                 )
             } else if controller.tabRows.isEmpty {
-                EmptyRow(
-                    symbol: bridge.isConnected ? "macwindow.on.rectangle" : "puzzlepiece.extension",
-                    title: bridge.isConnected ? "No audible tabs" : "Browser extension not connected",
-                    detail: bridge.isConnected
-                        ? "Play something in a tab and it shows up here."
-                        : "Install the Audify extension, then paste the pairing code from Settings."
-                )
+                if let playing = playingUnconnectedBrowser {
+                    // A browser known to support tab control is actively making noise but the
+                    // extension has never paired — the moment the "why is this just one row?"
+                    // question comes up, so this is where the answer belongs.
+                    BrowserSetupPrompt(browserName: playing.name, onOpenSettings: onOpenSettings)
+                } else {
+                    EmptyRow(
+                        symbol: bridge.isConnected ? "macwindow.on.rectangle" : "puzzlepiece.extension",
+                        title: bridge.isConnected ? "No audible tabs" : "Browser extension not connected",
+                        detail: bridge.isConnected
+                            ? "Play something in a tab and it shows up here."
+                            : "Install the Audify extension, then paste the pairing code from Settings."
+                    )
+                }
             } else {
                 ForEach(controller.tabRows) { row in
                     TabRowView(
@@ -201,6 +218,19 @@ struct MixerView: View {
                 }
             }
         }
+    }
+
+    /// The first playing, browser-identified app while the extension has not paired — the signal
+    /// that per-tab control would help right now, rather than just "at some point".
+    private var playingUnconnectedBrowser: AppRow? {
+        guard !bridge.isConnected else { return nil }
+        return controller.appRows.first { $0.isBrowser && $0.isPlaying }
+    }
+
+    private var microMuteHelpText: String {
+        let action = microphone.isMuted ? "Unmute microphone" : "Mute microphone"
+        guard preferences.micHotKeyEnabled else { return action }
+        return "\(action) (\(preferences.micHotKey.displayName))"
     }
 
     private var bridgeStatusText: String? {
@@ -356,6 +386,33 @@ struct TabRowView: View {
             Button("Reset to 100%", action: onReset)
             Button(row.muted ? "Unmute" : "Mute", action: onMute)
         }
+    }
+}
+
+/// Nudge shown when a supported browser is audibly playing but the tab extension has never
+/// connected — the exact moment "why can't I control this one tab?" comes up.
+struct BrowserSetupPrompt: View {
+    let browserName: String
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "puzzlepiece.extension")
+                    .foregroundStyle(.blue)
+                Text("Control \(browserName) tabs individually")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            Text("\(browserName) shows as one row because macOS only sees the app, not its tabs. A small extension gives Audify the tab list, so each one gets its own slider.")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Set Up in Settings", action: onOpenSettings)
+                .controlSize(.small)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(Color.blue.opacity(0.08))
     }
 }
 
