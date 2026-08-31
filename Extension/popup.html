@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 13px -apple-system, system-ui, sans-serif;
+    margin: 0; padding: 14px; width: 268px;
+    background: Canvas; color: CanvasText;
+  }
+  h1 { font-size: 13px; margin: 0 0 2px; display: flex; align-items: center; gap: 6px; }
+  .sub { font-size: 11px; opacity: 0.6; margin-bottom: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #8e8e93; flex: none; }
+  .dot.ok { background: #34c759; }
+  .dot.warn { background: #ff9500; }
+  .dot.bad { background: #ff3b30; }
+  label { display: block; font-size: 11px; opacity: 0.75; margin: 10px 0 3px; }
+  input[type=text], input[type=number] {
+    width: 100%; box-sizing: border-box; padding: 5px 7px; font: inherit;
+    border: 1px solid color-mix(in srgb, CanvasText 22%, transparent);
+    border-radius: 6px; background: Field; color: FieldText;
+  }
+  input[type=text] { font-family: ui-monospace, SFMono-Regular, monospace; letter-spacing: 0.5px; }
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row > :first-child { flex: 1; }
+  .row > :last-child { width: 78px; }
+  button {
+    margin-top: 12px; width: 100%; padding: 6px; font: inherit; font-weight: 500;
+    border: 0; border-radius: 6px; background: #0a84ff; color: #fff; cursor: pointer;
+  }
+  button:active { opacity: 0.8; }
+  button.secondary { background: color-mix(in srgb, CanvasText 12%, transparent); color: CanvasText; margin-top: 6px; }
+  .status { font-size: 11px; margin-top: 10px; opacity: 0.7; line-height: 1.4; }
+  .hint { font-size: 11px; opacity: 0.55; margin-top: 10px; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <h1><span class="dot" id="dot"></span> Audify Tab Volume</h1>
+  <div class="sub" id="state">Checking…</div>
+
+  <label for="token">Pairing code (from Audify ▸ Settings ▸ Browser)</label>
+  <div class="row">
+    <input type="text" id="token" placeholder="ABCD-EFGH-JKLM" autocomplete="off" spellcheck="false">
+    <div>
+      <label for="port">Port</label>
+      <input type="number" id="port" min="1024" max="65535">
+    </div>
+  </div>
+
+  <button id="save">Connect</button>
+  <button id="toggle" class="secondary">Disable</button>
+
+  <div class="status" id="status"></div>
+  <div class="hint">
+    Tabs are controlled from the Audify menu bar icon on your Mac. This popup only handles pairing.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

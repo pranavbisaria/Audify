@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>Audify</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.audify.mixer</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Audify</string>
+	<key>CFBundleDisplayName</key>
+	<string>Audify</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+
+	<!-- Menu bar utility: never show a Dock icon or a main window. -->
+	<key>LSUIElement</key>
+	<true/>
+
+	<!-- Shown in the system prompt when Audify first creates an audio tap. -->
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Audify needs system audio access to set the volume of individual apps. Audio is only re-mixed in memory — nothing is recorded, saved or sent anywhere.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Audify needs audio access to set the volume of individual apps. Nothing is recorded, saved or sent anywhere.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Audify uses Terminal to show diagnostics when you ask for them from Settings.</string>
+
+	<key>NSHumanReadableCopyright</key>
+	<string>Audify — per-app volume for macOS.</string>
+	<key>NSSupportsSuddenTermination</key>
+	<true/>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

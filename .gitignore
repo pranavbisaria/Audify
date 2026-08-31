@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+build/
+dist/
+*.xcodeproj
+*.xcworkspace
+.DS_Store
+Audify.app/
+*.dmg
