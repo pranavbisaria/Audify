@@ -1,4 +1,8 @@
-# Audify
+<p align="center">
+  <img src="docs/icon.png" width="120" height="120" alt="Audify icon">
+</p>
+
+<h1 align="center">Audify</h1>
 
 Per-app and per-tab volume control for macOS, from the menu bar.
 
@@ -17,6 +21,28 @@ and Intel Macs. See [Install](#install) below for first-launch notes and the fro
 [![Build](https://github.com/pranavbisaria/Audify/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
 
 ---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/mixer.png" width="340" alt="Audify's menu bar mixer, showing master volume, per-app sliders for Chrome and VLC, and browser tab control">
+</p>
+
+<p align="center"><sub>The mixer — master output, per-app sliders with live level meters, mic mute, all one click from the menu bar.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/settings-general.png" width="400" alt="Audify General settings: launch at login, volume boost off by default, hide idle apps, microphone shortcut">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/settings-browser.png" width="400" alt="Audify Browser settings: tab control toggle, connection status, pairing code">
+</p>
+
+<p align="center"><sub>General settings — boost stays off until you opt in — and Browser settings, where the extension pairs with a short code.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/mic-hud.png" width="220" alt="On-screen confirmation showing the microphone is on, after pressing the global shortcut">
+</p>
+
+<p align="center"><sub>The on-screen confirmation shown every time the global shortcut toggles the mic.</sub></p>
 
 ## What it does
 
