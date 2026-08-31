@@ -9,6 +9,14 @@ a quiet video past 100%, without touching anything else.
 Built for macOS 26, supports macOS 15 and later. Native Swift, universal binary, no Electron, no
 kernel extension, no virtual audio driver to install.
 
+**[⬇ Download the latest release](../../releases/latest)** — a signed-locally DMG for Apple
+silicon and Intel Macs. See [Install](#install) below for first-launch notes and the from-source
+option.
+
+[![Latest release](https://img.shields.io/github/v/release/pranavbisaria/Audify?label=latest&color=blue)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/pranavbisaria/Audify/total?label=downloads)](../../releases)
+[![Build](https://github.com/pranavbisaria/Audify/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
+
 ---
 
 ## What it does
@@ -101,6 +109,22 @@ audio access.
 
 ## Install
 
+### Option A — download the DMG (easiest)
+
+1. Grab the latest `Audify-x.y.z.dmg` from **[Releases](../../releases/latest)**.
+2. Open it and drag **Audify** into **Applications**.
+3. Launch Audify. macOS will say it's from an **unidentified developer** — these builds are
+   ad-hoc signed, not notarized (that needs a paid Apple Developer account). Right-click
+   **Audify** in Applications → **Open**, then click **Open** again in the dialog. You only need
+   to do this once; after that it opens normally, including via Launch at Login.
+4. Grant audio access when prompted — see [Permissions](#permissions) for what it's used for.
+
+Every release is built straight from this repository by the
+[`release` workflow](.github/workflows/release.yml) — you're welcome to read it before trusting
+the binary, or just build from source instead (Option B) and skip the download entirely.
+
+### Option B — build from source
+
 Requires Xcode command line tools. From the repository root:
 
 ```sh
@@ -122,7 +146,7 @@ make uninstall   # remove the app and its settings
 make clean
 ```
 
-### Signing
+#### Signing
 
 `make install` signs ad-hoc, which is fine for your own machine. Two consequences: macOS treats
 each rebuild as a new app, so audio permission may need re-granting, and *Start at Login* may need
@@ -133,6 +157,11 @@ make dmg SIGN_ID="Developer ID Application: Your Name (TEAMID)"
 xcrun notarytool submit dist/Audify.dmg --keychain-profile "AC" --wait
 xcrun stapler staple dist/Audify.app
 ```
+
+The published releases are ad-hoc signed too — there's no paid Apple Developer account behind
+this project (yet). If that changes, the signing identity can be added to the
+[`release` workflow](.github/workflows/release.yml) as a repository secret and future releases
+will open with no Gatekeeper warning at all.
 
 ## Permissions
 
@@ -207,3 +236,10 @@ Tools/makeicon.swift       Draws the app icon at build time
 
 `AudifyKit` has no dependency on the UI, which is what makes `make diagnose` and the tests possible
 without launching an app.
+
+## License
+
+Source-available under the [Audify Personal Use License](LICENSE) — you're welcome to read the
+code, build it, and run it for your own personal, non-commercial use. Redistribution, commercial
+use, and use of this code in other projects are not permitted without permission. This is not an
+OSI-approved open source license. For anything else, open an issue or get in touch.

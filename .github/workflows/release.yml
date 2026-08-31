@@ -1,0 +1,128 @@
+name: Release
+
+# Pushing a version tag (e.g. `v1.0.0`) builds a universal Audify.app, packages it as a DMG, and
+# publishes it as a GitHub Release. `workflow_dispatch` runs the same build for verification
+# without publishing anything, so the pipeline can be tested between real releases.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (test build only — does not publish a release)"
+        required: false
+        default: "0.0.0-dev"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, so --generate-notes can diff against the previous tag
+
+      - name: Select Xcode 26
+        # The macOS 26 SDK is what declares CATapDescription.bundleIDs /
+        # isProcessRestoreEnabled, which AudifyKit uses behind `if #available(macOS 26.0, *)`.
+        # The runner's *default* Xcode is older than that, so it has to be selected explicitly.
+        run: |
+          set -euo pipefail
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode 26.x found on this runner image. Installed Xcodes:"
+            ls /Applications | grep -i xcode || true
+            exit 1
+          fi
+          echo "Selecting $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building Audify $VERSION"
+
+      - name: Stamp app version
+        run: |
+          set -euo pipefail
+          plutil -replace CFBundleShortVersionString -string "${{ steps.version.outputs.version }}" Resources/Info.plist
+          plutil -replace CFBundleVersion -string "${{ github.run_number }}" Resources/Info.plist
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build DMG
+        # Ad-hoc signed (Makefile's default SIGN_ID). Downloaders will see Gatekeeper's
+        # "unidentified developer" warning once — see the release notes step below.
+        run: make dmg
+
+      - name: Package artifacts
+        id: artifacts
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          mv "dist/Audify.dmg" "dist/Audify-$VERSION.dmg"
+          shasum -a 256 "dist/Audify-$VERSION.dmg" > "dist/Audify-$VERSION.dmg.sha256"
+          echo "dmg_path=dist/Audify-$VERSION.dmg" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=dist/Audify-$VERSION.dmg.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Audify-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.artifacts.outputs.dmg_path }}
+            ${{ steps.artifacts.outputs.checksum_path }}
+          if-no-files-found: error
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG="${{ steps.artifacts.outputs.dmg_path }}"
+          CHECKSUM="${{ steps.artifacts.outputs.checksum_path }}"
+
+          cat > /tmp/notes.md <<EOF
+          ## Install
+
+          1. Download **Audify-$VERSION.dmg** below and open it.
+          2. Drag **Audify** into **Applications**.
+          3. Launch Audify. macOS will say it's from an unidentified developer — this build is
+             ad-hoc signed, not notarized (no paid Apple Developer account behind it). **Right-click
+             Audify → Open**, then click **Open** again in the dialog that follows. You only need
+             to do this once.
+          4. Grant audio access when prompted — see the
+             [README](https://github.com/${{ github.repository }}#permissions) for what it's used
+             for and why.
+
+          Prefer to build it yourself instead? See
+          [Install from source](https://github.com/${{ github.repository }}#install).
+
+          ---
+          EOF
+
+          gh release create "${GITHUB_REF_NAME}" \
+            "$DMG" "$CHECKSUM" \
+            --title "Audify $VERSION" \
+            --notes-file /tmp/notes.md \
+            --generate-notes
